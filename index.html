@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>For You 💘</title>
+
+  <style>
+    :root{
+      --bg1:#ffdde6;
+      --bg2:#b11069;
+      --card:#ffffffcc;
+      --text:#2b2b2b;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--text);
+      background: radial-gradient(circle at top, var(--bg1), var(--bg2));
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow-x:hidden;
+      padding: 28px 0;
+      position: relative;
+    }
+
+    /* floating hearts layer */
+    .hearts{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+    }
+    .heart{
+      position:absolute;
+      animation: floatUp linear forwards;
+      filter: drop-shadow(0 6px 8px rgba(0,0,0,.18));
+      user-select:none;
+    }
+    @keyframes floatUp{
+      from{ transform: translateY(12vh) scale(1); opacity:.95; }
+      to{ transform: translateY(-120vh) scale(1.2); opacity:0; }
+    }
+
+    .wrap{ width:min(900px, 92vw); z-index:1; }
+    .card{
+      background: var(--card);
+      border: 1px solid #ffffffaa;
+      border-radius: 22px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.12);
+      padding: 26px;
+      backdrop-filter: blur(8px);
+    }
+
+    h1{
+      margin:0 0 14px;
+      font-size: clamp(26px, 4vw, 42px);
+      letter-spacing:-0.01em;
+    }
+
+    /* countdown block */
+    .countdown{
+      border-radius: 22px;
+      background: rgba(255,255,255,.55);
+      box-shadow: 0 10px 26px rgba(0,0,0,.12);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .countdownTime{
+      font-size: clamp(28px, 4.4vw, 46px);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      margin: 6px 0 10px;
+    }
+
+    .countdownLabel{
+      opacity: .8;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .countdownNote{
+      opacity: .85;
+      font-size: 14px;
+    }
+
+    /* slideshow */
+    .slideshow{
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgba(255,255,255,.55);
+      box-shadow: 0 10px 26px rgba(0,0,0,.12);
+    }
+
+    .slideshow img{
+      width: 100%;
+      height: min(52vh, 420px);
+      object-fit: cover;
+      display:block;
+      opacity: 1;
+      transition: opacity 450ms ease;
+      user-select:none;
+      -webkit-user-drag:none;
+    }
+
+    .slideControls{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.45);
+      backdrop-filter: blur(6px);
+    }
+
+    .navBtn{
+      width:44px;
+      height:44px;
+      border:0;
+      border-radius:14px;
+      background:#fff;
+      cursor:pointer;
+      font-size:18px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.10);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .navBtn:hover{
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(0,0,0,.14);
+    }
+
+    .dots{
+      display:flex;
+      gap:8px;
+      flex:1;
+      justify-content:center;
+      align-items:center;
+      overflow:auto hidden;
+      padding: 4px 0;
+      scrollbar-width:none;
+    }
+    .dots::-webkit-scrollbar{ display:none; }
+
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:#ffffff;
+      opacity:.45;
+      cursor:pointer;
+      transition: transform .15s ease, opacity .15s ease;
+      flex:0 0 auto;
+    }
+    .dot.active{
+      opacity:1;
+      transform: scale(1.12);
+    }
+
+    .footer{
+      margin-top:14px;
+      opacity:.75;
+      font-size:13px;
+      text-align:center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hearts" id="hearts"></div>
+
+  <div class="wrap">
+    <div class="card">
+      <h1 id="title">Have Patience Shorty 💘</h1>
+
+      <!-- Countdown screen -->
+      <div id="countdownWrap" class="countdown">
+        <div class="countdownTime" id="timeLeft">-- : -- : -- : --</div>
+        <div class="countdownLabel">Days • Hours • Minutes • Seconds </div>
+        <div class="countdownNote">Come back when Time runs out 🫶</div>
+      </div>
+
+      <!-- The “true gem” (hidden until unlock) -->
+      <div id="gem" style="display:none;">
+        <div class="slideshow" aria-label="Photos of us">
+          <img id="slideImg" alt="Us" src="" />
+          <div class="slideControls">
+            <button id="prevBtn" class="navBtn" type="button" aria-label="Previous photo">←</button>
+            <div id="dots" class="dots" aria-label="Slide dots"></div>
+            <button id="nextBtn" class="navBtn" type="button" aria-label="Next photo">→</button>
+          </div>
+        </div>
+
+        <div class="footer">Made by Crispy/Coolman 💗</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------- floating hearts (background) --------
+    const heartsLayer = document.getElementById("hearts");
+
+    function burstHearts(n = 2){
+      for(let i=0;i<n;i++){
+        const h = document.createElement("div");
+        h.className = "heart";
+        h.textContent = Math.random() < 0.5 ? "💗" : "💘";
+        h.style.left = (Math.random() * 100) + "vw";
+        h.style.fontSize = (14 + Math.random() * 16) + "px";
+        h.style.opacity = (0.55 + Math.random() * 0.45);
+        h.style.animationDuration = (3.0 + Math.random() * 3.0) + "s";
+        heartsLayer.appendChild(h);
+        setTimeout(() => h.remove(), 6500);
+      }
+    }
+
+    // subtle idle hearts (tweak these numbers if you want less/more)
+    setInterval(() => burstHearts(2), 900);
+
+    // -------- countdown gate --------
+    // Unlock at Feb 14, 2026 12:00 AM America/New_York
+    // Feb 14, 2026 00:00 ET = Feb 14, 2026 05:00 UTC (EST is UTC-5)
+    const unlockAtUtcMs = Date.UTC(2026, 1, 14, 5, 0, 0); // month is 0-based: 1 = February
+
+    const titleEl = document.getElementById("title");
+    const countdownWrap = document.getElementById("countdownWrap");
+    const timeLeftEl = document.getElementById("timeLeft");
+    const gemEl = document.getElementById("gem");
+
+    function pad2(n){ return String(n).padStart(2, "0"); }
+
+    function updateCountdown(){
+      const now = Date.now();
+      let diff = unlockAtUtcMs - now;
+
+      if(diff <= 0){
+        // Unlock!
+        countdownWrap.style.display = "none";
+        gemEl.style.display = "block";
+        titleEl.textContent = "Happy Valentine’s Day My Love 💘";
+        burstHearts(25);
+
+        // Start slideshow ONLY after unlock
+        initSlideshowOnce();
+        return true;
+      }
+
+      const totalSeconds = Math.floor(diff / 1000);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+
+      timeLeftEl.textContent = `${pad2(days)} : ${pad2(hours)} : ${pad2(mins)} : ${pad2(secs)}`;
+      return false;
+    }
+
+    // -------- slideshow (gated) --------
+    const photos = [
+      "img/45CC162D-FEA0-44A5-BF67-BB9AA5922EF5.JPG",
+      "img/20250525_153038_CE472E.jpeg",
+      "img/20251030_232545_C00022.jpeg",
+      "img/20251031_200309_CB11DA.jpeg",
+      "img/DSC01922.jpeg",
+      "img/IMG_0317.JPG",
+      "img/IMG_0524.JPEG",
+      "img/IMG_0527.JPEG",
+      "img/IMG_0528.JPEG",
+      "img/IMG_0752.JPG",
+      "img/IMG_0904.PNG",
+      "img/IMG_1209.JPEG",
+      "img/IMG_1348.JPG",
+      "img/IMG_1448.JPEG",
+      "img/IMG_1598.JPEG",
+      "img/IMG_1601.JPEG",
+      "img/IMG_1636.JPEG",
+      "img/IMG_1639.JPEG",
+      "img/IMG_1889.JPEG",
+      "img/IMG_2070.JPEG",
+      "img/IMG_2076.JPEG",
+      "img/IMG_2081.JPEG",
+      "img/IMG_2184.JPEG",
+      "img/IMG_2354.JPEG",
+      "img/IMG_2356.JPEG",
+      "img/IMG_2398.JPEG",
+      "img/IMG_2579.JPEG",
+      "img/IMG_2581.JPEG",
+      "img/IMG_2607.JPEG",
+      "img/IMG_2611.JPEG",
+      "img/IMG_2612.JPEG",
+      "img/IMG_2616.JPEG",
+      "img/IMG_2634.JPEG",
+      "img/IMG_2653.JPEG",
+      "img/IMG_2753.JPEG",
+      "img/IMG_2861.JPEG",
+      "img/IMG_2862.JPEG",
+      "img/IMG_8410.JPEG",
+    ];
+
+    const imgEl   = document.getElementById("slideImg");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const dotsEl  = document.getElementById("dots");
+
+    let idx = 0;
+    let timer = null;
+    const intervalMs = 7500;
+    let slideshowInitialized = false;
+
+    function buildDots(){
+      dotsEl.innerHTML = "";
+      photos.forEach((_, i) => {
+        const d = document.createElement("div");
+        d.className = "dot" + (i === idx ? " active" : "");
+        d.title = `Photo ${i + 1}`;
+        d.addEventListener("click", () => showSlide(i, true));
+        dotsEl.appendChild(d);
+      });
+    }
+
+    function showSlide(i, userAction=false){
+      if(!photos.length) return;
+
+      idx = (i + photos.length) % photos.length;
+
+      // fade out
+      imgEl.style.opacity = "0";
+
+      // swap image, then fade in
+      setTimeout(() => {
+        imgEl.src = photos[idx];
+        imgEl.onload = () => { imgEl.style.opacity = "1"; };
+        buildDots();
+      }, 220);
+
+      // extra hearts on manual clicks
+      if(userAction) burstHearts(10);
+      if(userAction) restartAuto();
+    }
+
+    function next(){ showSlide(idx + 1, true); }
+    function prev(){ showSlide(idx - 1, true); }
+
+    function restartAuto(){
+      if(timer) clearInterval(timer);
+      timer = setInterval(() => showSlide(idx + 1, false), intervalMs);
+    }
+
+    function initSlideshowOnce(){
+      if(slideshowInitialized) return;
+      slideshowInitialized = true;
+
+      prevBtn.addEventListener("click", prev);
+      nextBtn.addEventListener("click", next);
+
+      // keyboard support
+      document.addEventListener("keydown", (e) => {
+        if(e.key === "ArrowLeft") prev();
+        if(e.key === "ArrowRight") next();
+      });
+
+      imgEl.src = photos[0] || "";
+      buildDots();
+      restartAuto();
+    }
+
+    // Run countdown immediately and every second
+    updateCountdown();
+    const countdownTimer = setInterval(() => {
+      const unlocked = updateCountdown();
+      if(unlocked) clearInterval(countdownTimer);
+    }, 1000);
+  </script>
+</body>
+</html>
